@@ -1,6 +1,6 @@
 # MotionWeave
 
-Official implementation of **MotionWeave: Learning Motion-Centered Future Dynamics for Vision-Language-Action Policies**.
+Research implementation accompanying **MotionWeave: Learning Motion-Centered Future Dynamics for Vision-Language-Action Policies**.
 
 MotionWeave avoids reconstructing the complete future. Instead, it learns the local visual changes that matter to each action timestep. The **Action-Induced Motion Grounder (AIMG)** produces horizon-specific interaction representations from current visual tokens, while the **Horizon Residual Composer (HRC)** injects their temporal differences into action tokens before Action DiT denoising. Future robot-arm masks supervise grounding only during training; inference uses the current RGB observation, language instruction, and proprioception.
 
@@ -98,23 +98,36 @@ DATA_ROOT/
 
 Each pickle contains episode-wise RGB observations, proprioceptive states, and actions. The paper uses 25 expert trajectories of 175 timesteps per task.
 
-Render robot-arm masks for every expert frame with Robot Engine and store one sequence per episode:
+We obtain the robot-arm masks offline with [RoboEngine](https://github.com/michaelyuancb/roboengine); its [project page](https://roboengine.github.io/) provides the model and installation details. After installing RoboEngine, generate an episode-aligned cache:
+
+```bash
+export DATA_ROOT=/path/to/metaworld
+export ROBOENGINE_MASK_ROOT=/path/to/metaworld_roboengine_masks
+
+PYTHONPATH=/path/to/roboengine:${PYTHONPATH} \
+python scripts/generate_roboengine_masks.py \
+  --data_root "$DATA_ROOT" \
+  --output_root "$ROBOENGINE_MASK_ROOT" \
+  --mask_size 128
+```
+
+The script calls RoboEngine's video segmentation interface and stores one sequence per episode:
 
 ```text
-MASK_ROOT/
+ROBOENGINE_MASK_ROOT/
   pick-place-v2/episode_000.npy
   pick-place-v2/episode_001.npy
   ...
 ```
 
-Each file must have shape `[T, H, W]` (or `[T, 1, H, W]`) and contain binary or `[0,1]` masks. For a sample at time `t`, training uses masks at `t+1` through `t+4`; they are downsampled to the VLM's 16x16 visual-token grid and normalized into spatial distributions.
+Each file has shape `[T, 128, 128]` and contains binary masks. For a sample at time `t`, training reads the masks at `t+1` through `t+4`, applies area downsampling to the VLM's `16 x 16` visual-token grid, and normalizes each grid into a spatial target distribution. The AIMG attention at each horizon is supervised against the corresponding target with KL divergence. RoboEngine is used only for offline preprocessing and is not required at policy inference time.
 
 Validate alignment before training:
 
 ```bash
 python scripts/validate_mask_data.py \
   --data_root "$DATA_ROOT" \
-  --mask_root "$MASK_ROOT"
+  --roboengine_mask_root "$ROBOENGINE_MASK_ROOT"
 ```
 
 ## Training
@@ -123,7 +136,7 @@ Set paths and launch the paper configuration:
 
 ```bash
 export DATA_ROOT=/path/to/metaworld
-export MASK_ROOT=/path/to/metaworld_robot_masks
+export ROBOENGINE_MASK_ROOT=/path/to/metaworld_roboengine_masks
 export VLM_MODEL=/path/to/InternVL3-2B
 export OUTPUT_ROOT=/path/to/outputs
 
@@ -151,6 +164,7 @@ MotionWeave/
   assets/architecture.png
   scripts/train_metaworld6.sh
   scripts/eval_metaworld6.sh
+  scripts/generate_roboengine_masks.py
   scripts/validate_mask_data.py
   src/train_motionweave.py
   src/eval_motionweave_firstsuccess.py
@@ -160,16 +174,9 @@ MotionWeave/
   src/dataset.py
 ```
 
-The release does not redistribute InternVL3 weights, MetaWorld expert trajectories, or Robot Engine assets.
+The release does not redistribute InternVL3 weights, MetaWorld expert trajectories, or RoboEngine assets.
 
 ## Citation
 
-```bibtex
-@inproceedings{wang2027motionweave,
-  title     = {MotionWeave: Learning Motion-Centered Future Dynamics for Vision-Language-Action Policies},
-  author    = {Wang, Jingqiu and Wang, Yan},
-  booktitle = {IEEE International Conference on Acoustics, Speech and Signal Processing},
-  year      = {2027}
-}
-```
+Citation information will be added after publication.
 

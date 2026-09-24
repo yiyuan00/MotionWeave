@@ -40,13 +40,19 @@ def load_masks(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_root", required=True)
-    parser.add_argument("--mask_root", required=True)
+    parser.add_argument(
+        "--roboengine_mask_root",
+        "--mask_root",
+        dest="roboengine_mask_root",
+        required=True,
+        help="RoboEngine mask cache root. --mask_root is a legacy alias.",
+    )
     parser.add_argument("--tasks", default=",".join(DEFAULT_TASKS))
     parser.add_argument("--episodes", type=int, default=25)
     args = parser.parse_args()
 
     data_root = Path(args.data_root)
-    mask_root = Path(args.mask_root)
+    mask_root = Path(args.roboengine_mask_root)
     tasks = [task.strip() for task in args.tasks.split(",") if task.strip()]
     checked = 0
 

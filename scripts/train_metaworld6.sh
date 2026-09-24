@@ -2,7 +2,8 @@
 set -euo pipefail
 
 : "${DATA_ROOT:?Set DATA_ROOT to the MetaWorld expert-data directory}"
-: "${MASK_ROOT:?Set MASK_ROOT to the future robot-arm mask directory}"
+: "${ROBOENGINE_MASK_ROOT:=${MASK_ROOT:-}}"
+: "${ROBOENGINE_MASK_ROOT:?Set ROBOENGINE_MASK_ROOT to the RoboEngine robot-mask directory}"
 : "${VLM_MODEL:?Set VLM_MODEL to the local InternVL3-2B directory}"
 : "${OUTPUT_ROOT:?Set OUTPUT_ROOT to the output directory}"
 
@@ -22,7 +23,7 @@ torchrun \
   src/train_motionweave.py \
   --tasks pick-place-v2,disassemble-v2,stick-pull-v2,assembly-v2,shelf-place-v2,hand-insert-v2 \
   --data_root "${DATA_ROOT}" \
-  --motion_mask_root "${MASK_ROOT}" \
+  --roboengine_mask_root "${ROBOENGINE_MASK_ROOT}" \
   --vlm_model "${VLM_MODEL}" \
   --strategy fsdp \
   --gradient_checkpointing \
